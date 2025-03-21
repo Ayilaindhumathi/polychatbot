@@ -7,12 +7,12 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Get database URL from .env
+# Get database URL from system environment
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Validate database URL
 if not DATABASE_URL:
-    raise ValueError("❌ DATABASE_URL not found. Check your .env file.")
+    raise ValueError("❌ DATABASE_URL not found. Check your system environment variables.")
 
 # Connect to Supabase PostgreSQL
 try:
@@ -24,7 +24,7 @@ except Exception as e:
     exit()
 
 # Initialize Flask app
-app = Flask(__name__)  # ✅ Fixed here
+app = Flask(__name__)
 CORS(app)
 
 # List of common greetings
@@ -39,7 +39,7 @@ greetings = {
     "how are you": "I'm just a chatbot, but I'm always ready to help!"
 }
 
-# Predefined responses
+# Predefined responses including POLYCET
 predefined_responses = {
     "sbtet": """📘 State Board of Technical Education and Training (SBTET), Andhra Pradesh\n
 SBTET is responsible for the development of technical education in Andhra Pradesh. It oversees diploma courses, polytechnic colleges, curriculum development, and AP POLYCET admissions.\n
@@ -54,17 +54,26 @@ SBTET is responsible for the development of technical education in Andhra Prades
    - 📞 Phone: +91-866-2489933
    - 📧 Email: support@sbtetap.gov.in
 """,
-    "advantages of polytechnic": """🎓 Advantages of Polytechnic Compared to Other Courses\n
-Polytechnic courses provide practical, industry-oriented education and offer several benefits over other traditional degree programs:\n
-✅ Shorter Duration: Most diploma courses last 3 years, compared to 4-5 years for engineering degrees.\n
-✅ Affordable Fees: Lower tuition costs compared to B.Tech or other professional degrees.\n
-✅ Early Job Opportunities: Polytechnic graduates can enter the workforce earlier and start earning.\n
-✅ Practical Learning: Focus on hands-on training and real-world applications rather than just theoretical concepts.\n
-✅ Industry Demand: Skilled diploma holders in engineering, computer science, and electronics are highly sought after.\n
-✅ Lateral Entry to B.Tech: Polytechnic students can directly enter the second year of B.Tech, saving time and costs.\n
-✅ Government & Private Jobs: Eligible for government sector jobs (like JE, ITI, PSU) and private company placements.\n
-✅ Entrepreneurial Opportunities: With practical skills, students can start their own businesses or work as freelancers.\n
-Polytechnic courses are a great choice for students looking for early employment and skill-based education. 🚀
+    "polycet": """📝 **Andhra Pradesh POLYCET (AP POLYCET)**\n
+AP POLYCET (Polytechnic Common Entrance Test) is a state-level entrance exam conducted by SBTET Andhra Pradesh for admission into diploma/polytechnic courses in engineering and non-engineering fields.\n
+✅ **Eligibility Criteria:**\n
+   - Candidates must have passed SSC/10th from a recognized board.\n
+   - No age limit for appearing in the exam.\n
+✅ **Exam Pattern:**\n
+   - Total Questions: 120 (Maths: 60, Physics: 30, Chemistry: 30)\n
+   - Duration: 2 hours\n
+   - Mode: Offline (OMR-based)\n
+✅ **Important Dates:**\n
+   - Exam Date: April-May (Tentative)\n
+   - Result Declaration: Within 10 days after the exam\n
+✅ **Application Process:**\n
+   - Registration on [https://polycetap.nic.in](https://polycetap.nic.in)\n
+   - Application Fee: ₹400 (General), ₹250 (SC/ST)\n
+✅ **Admission Process:**\n
+   - After results, rank-wise counseling takes place for seat allocation in polytechnic colleges.\n
+📞 **Helpline:**\n
+   - SBTET Andhra Pradesh Contact: +91-866-2489933\n
+   - Email: support@polycetap.nic.in
 """
 }
 
@@ -81,7 +90,7 @@ def chatbot():
     if user_query in greetings:
         return jsonify({"response": greetings[user_query]})
 
-    # Check for predefined responses (SBTET, Polytechnic advantages, etc.)
+    # Check for predefined responses (SBTET, POLYCET, Polytechnic advantages, etc.)
     for keyword in predefined_responses:
         if keyword in user_query:
             return jsonify({"response": predefined_responses[keyword]})
@@ -125,4 +134,3 @@ def chatbot():
 # Run Flask app
 if __name__ == '__main__':
     app.run(debug=True)
-

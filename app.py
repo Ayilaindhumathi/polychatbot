@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import psycopg2
 import os
+import re
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -86,6 +87,9 @@ def chatbot():
     if not user_query:
         return jsonify({"response": "Please enter a valid query."})
 
+    # Remove unnecessary words like "Tell me about"
+    user_query = re.sub(r"(tell me about|information on|details of)", "", user_query).strip()
+
     # Check if the input is a greeting
     if user_query in greetings:
         return jsonify({"response": greetings[user_query]})
@@ -96,40 +100,46 @@ def chatbot():
             return jsonify({"response": predefined_responses[keyword]})
 
     # Search colleges by name, district, or course
-    cursor.execute("""
-        SELECT c.Name, c.Code, c.Address, c.District, c.Email, c.Phone, 
-               ARRAY_AGG(DISTINCT co.CourseName || ' (' || co.Seats || ' seats)') AS Courses,
-               ARRAY_AGG(DISTINCT f.FacilityName) AS Facilities
-        FROM Colleges c
-        LEFT JOIN Courses co ON c.CollegeID = co.CollegeID
-        LEFT JOIN Facilities f ON c.CollegeID = f.CollegeID
-        WHERE LOWER(c.Name) LIKE %s OR LOWER(c.District) LIKE %s OR LOWER(co.CourseName) LIKE %s
-        GROUP BY c.CollegeID
-    """, (f"%{user_query}%", f"%{user_query}%", f"%{user_query}%"))
+    try:
+        cursor.execute("""
+            SELECT c.Name, c.Code, c.Address, c.District, c.Email, c.Phone, 
+                   ARRAY_AGG(DISTINCT co.CourseName || ' (' || co.Seats || ' seats)') AS Courses,
+                   ARRAY_AGG(DISTINCT f.FacilityName) AS Facilities
+            FROM Colleges c
+            LEFT JOIN Courses co ON c.CollegeID = co.CollegeID
+            LEFT JOIN Facilities f ON c.CollegeID = f.CollegeID
+            WHERE LOWER(c.Name) LIKE %s OR LOWER(c.District) LIKE %s OR LOWER(co.CourseName) LIKE %s
+            GROUP BY c.CollegeID
+        """, (f"%{user_query}%", f"%{user_query}%", f"%{user_query}%"))
+        
+        results = cursor.fetchall()
+        print(f"🔎 SQL Query Results: {results}")  # Debugging
 
-    results = cursor.fetchall()
+        if not results:
+            return jsonify({"response": "No matching colleges found. Try searching by district, course, or college name."})
 
-    if not results:
-        return jsonify({"response": "No matching colleges found. Try searching by district, course, or college name."})
+        # Format Response for Readability
+        structured_responses = []
+        for row in results:
+            college_name, code, address, district, email, phone, courses, facilities = row
+            structured_text = (
+                f"🏫 College Name: {college_name}\n"
+                f"📜 Courses Offered:\n"
+                + "\n".join([f"   - {course}" for course in courses]) + "\n"
+                f"🏷 College Code: {code}\n"
+                f"📍 Location: {address}, {district}\n"
+                f"📧 Email: {email if email else 'N/A'}\n"
+                f"📞 Phone: {phone if phone else 'N/A'}\n"
+                f"🏢 Facilities Available:\n"
+                + "\n".join([f"   - {facility}" for facility in facilities]) + "\n"
+            )
+            structured_responses.append(structured_text)
 
-    # Format Response for Readability
-    structured_responses = []
-    for row in results:
-        college_name, code, address, district, email, phone, courses, facilities = row
-        structured_text = (
-            f"🏫 College Name: {college_name}\n"
-            f"📜 Courses Offered:\n"
-            + "\n".join([f"   - {course}" for course in courses]) + "\n"
-            f"🏷 College Code: {code}\n"
-            f"📍 Location: {address}, {district}\n"
-            f"📧 Email: {email if email else 'N/A'}\n"
-            f"📞 Phone: {phone if phone else 'N/A'}\n"
-            f"🏢 Facilities Available:\n"
-            + "\n".join([f"   - {facility}" for facility in facilities]) + "\n"
-        )
-        structured_responses.append(structured_text)
+        return jsonify({"response": "\n\n------------------------------------------------------\n\n".join(structured_responses)})
 
-    return jsonify({"response": "\n\n------------------------------------------------------\n\n".join(structured_responses)})
+    except Exception as e:
+        print(f"❌ SQL Error: {e}")
+        return jsonify({"response": "Database error. Please try again later."})
 
 # Run Flask app
 if __name__ == '__main__':
